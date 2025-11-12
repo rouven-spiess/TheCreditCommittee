@@ -4,13 +4,17 @@ Automated credit decision-making system using LangGraph with multi-agent workflo
 
 ## Table of Contents
 
-- [General Info](#general-info)
-- [Baseline Model](#baseline-model)
-- [Screenshots](#screenshots)
-- [Technologies](#technologies)
-- [Code Examples](#code-examples)
-- [Features](#features)
-- [Status and Report](#status-and-report)
+- [The Credit Committee](#the-credit-committee)
+  - [Table of Contents](#table-of-contents)
+  - [General Info](#general-info)
+  - [Baseline Model](#baseline-model)
+  - [Screenshots](#screenshots)
+  - [Technologies](#technologies)
+  - [Code Examples](#code-examples)
+    - [Basic Usage](#basic-usage)
+    - [Environment Setup](#environment-setup)
+  - [Features](#features)
+  - [Status and Report](#status-and-report)
 
 ## General Info
 
@@ -71,6 +75,9 @@ result = app.invoke({"input": input_data})
 # Access results
 print(result["credit_officer"]["memo"])
 print("Decision:", result["credit_officer"]["decision"])
+
+# Test
+uv run pytest test/test_tools.py -v
 ```
 
 ### Environment Setup

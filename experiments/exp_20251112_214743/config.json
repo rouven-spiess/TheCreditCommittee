@@ -1,0 +1,72 @@
+{
+  "experiment": {
+    "name": "baseline_tavily_7d",
+    "description": "Baseline experiment with 7-day time range for Tavily search",
+    "tags": [
+      "baseline",
+      "tavily"
+    ]
+  },
+  "tools": {
+    "tavily": {
+      "max_results": 5,
+      "include_answer": true,
+      "include_raw_content": false,
+      "include_images": false,
+      "search_depth": "advanced",
+      "time_range": "7d"
+    },
+    "alphavantage": {
+      "function": "INCOME_STATEMENT"
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "name": "sanitize_input",
+        "enabled": true
+      },
+      {
+        "name": "due_diligence",
+        "enabled": true
+      },
+      {
+        "name": "industry",
+        "enabled": true
+      },
+      {
+        "name": "credit_risk",
+        "enabled": true
+      },
+      {
+        "name": "credit_officer",
+        "enabled": true
+      }
+    ],
+    "edges": [
+      {
+        "from": "sanitize_input",
+        "to": [
+          "due_diligence",
+          "credit_risk"
+        ]
+      },
+      {
+        "from": "due_diligence",
+        "to": "industry"
+      },
+      {
+        "from": "credit_risk",
+        "to": "industry"
+      },
+      {
+        "from": "industry",
+        "to": "credit_officer"
+      }
+    ]
+  },
+  "decision_rules": {
+    "altman_z_threshold": 2.6,
+    "require_no_major_risks": true
+  }
+}

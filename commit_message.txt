@@ -1,7 +1,39 @@
-feat: implement credit committee LangGraph workflow
+feat: add experiment tracking and configuration system
 
-- Add multi-agent credit decision system with parallel processing
-- Integrate Tavily Search API for research
-- Add state-based workflow with sanitization, due diligence, risk assessment
-- Include documentation and graph visualization
-- Configure environment variables and dependencies
+Major changes:
+- Add Weights & Biases (W&B) integration for experiment tracking
+- Implement YAML-based configuration system for tools and graph structure
+- Add configurable Tavily search tool (time_range, max_results, search_depth, etc.)
+- Add dynamic graph creation from configuration files
+- Add experiment runner script (run_experiment.py)
+- Add local experiment storage with JSON results and metrics
+
+Configuration system:
+- YAML configs for tool parameters (Tavily: time_range, max_results, etc.)
+- YAML configs for graph structure (nodes, edges, enabled/disabled)
+- Pydantic models for type-safe config validation
+- Config loader module with validation
+
+Experiment tracking:
+- W&B integration with automatic config/metric logging
+- Local backup storage in experiments/ directory
+- Experiment metadata and artifact tracking
+- Support for comparing multiple experiment runs
+
+Code structure:
+- Refactor agents to accept configurable tools
+- Add create_graph_from_config() for dynamic graph building
+- Maintain backward compatibility with default graph
+
+Known limitations:
+- credit_risk_agent still uses mock financial data
+- alphavantage_tool is not yet integrated into credit_risk_agent workflow
+- AlphaVantage tool exists but needs integration in credit risk assessment
+
+Files added:
+- modules/config_loader.py - YAML config loading and validation
+- modules/experiment_tracker.py - W&B and local tracking
+- configs/example_experiment.yaml - Example configuration
+- run_experiment.py - Experiment runner script
+- EXPERIMENT_TRACKING.md - Documentation
+- README_EXPERIMENTS.md - Usage guide

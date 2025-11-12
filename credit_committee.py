@@ -1,13 +1,6 @@
-import os
-from typing import TypedDict
-from dotenv import load_dotenv
+from typing import TypedDict, Optional
 from langgraph.graph import StateGraph
-# from langchain_community.tools.alpha_vantage.tool import AlphaVantageTool
-from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_community.utilities.tavily_search import TavilySearchAPIWrapper
-
-# Load environment variables
-load_dotenv()
+from modules.tools import tavily_search_tool, alphavantage_tool, create_tavily_tool
 
 # Define state schema
 class State(TypedDict):
@@ -16,14 +9,6 @@ class State(TypedDict):
     industry: dict
     credit_risk: dict
     credit_officer: dict
-
-# Define tools
-# alphavantage_tool = AlphaVantageTool(api_key=os.getenv("ALPHA_VANTAGE_API_KEY"))
-tavily_api_key = os.getenv("TAVILY_API_KEY")
-if not tavily_api_key:
-    raise ValueError("TAVILY_API_KEY not found in environment variables. Please set it in .env file.")
-tavily_api_wrapper = TavilySearchAPIWrapper(tavily_api_key=tavily_api_key)
-tavily_search_tool = TavilySearchResults(api_wrapper=tavily_api_wrapper)
 
 # Input sanitization function
 def sanitize_input(state):
@@ -37,33 +22,41 @@ def sanitize_input(state):
     }
     return {"input": sanitized}
 
-# Define agents (nodes)
-def due_diligence_agent(state):
-    # Use Tavily for recent news, management info etc.
-    company = state["input"]["name"]
-    results_news = tavily_search_tool.invoke(f"{company} recent news")
-    results_history = tavily_search_tool.invoke(f"{company} company history")
-    results_management = tavily_search_tool.invoke(f"{company} management team")
-    return {
-        "due_diligence": {
-            "news": results_news,
-            "history": results_history,
-            "management": results_management,
+# Define agents (nodes) - these will use the tool passed to them
+def create_due_diligence_agent(tavily_tool):
+    def due_diligence_agent(state):
+        # Use Tavily for recent news, management info etc.
+        company = state["input"]["name"]
+        results_news = tavily_tool.invoke(f"{company} recent news")
+        results_history = tavily_tool.invoke(f"{company} company history")
+        results_management = tavily_tool.invoke(f"{company} management team")
+        return {
+            "due_diligence": {
+                "news": results_news,
+                "history": results_history,
+                "management": results_management,
+            }
         }
-    }
+    return due_diligence_agent
 
-def industry_agent(state):
-    industry = state["input"]["industry"]
-    trends = tavily_search_tool.invoke(f"{industry} industry trends")
-    competitive = tavily_search_tool.invoke(f"{industry} competitive landscape")
-    economic = tavily_search_tool.invoke(f"{industry} economic outlook")
-    return {
-        "industry": {
-            "trends": trends,
-            "competitive_landscape": competitive,
-            "economic_outlook": economic,
+def create_industry_agent(tavily_tool):
+    def industry_agent(state):
+        industry = state["input"]["industry"]
+        trends = tavily_tool.invoke(f"{industry} industry trends")
+        competitive = tavily_tool.invoke(f"{industry} competitive landscape")
+        economic = tavily_tool.invoke(f"{industry} economic outlook")
+        return {
+            "industry": {
+                "trends": trends,
+                "competitive_landscape": competitive,
+                "economic_outlook": economic,
+            }
         }
-    }
+    return industry_agent
+
+# Default agents using default tool (for backward compatibility)
+due_diligence_agent = create_due_diligence_agent(tavily_search_tool)
+industry_agent = create_industry_agent(tavily_search_tool)
 
 def credit_risk_agent(state):
     company = state["input"]["name"]
@@ -142,19 +135,82 @@ graph.add_edge("industry", "credit_officer")
 
 graph.set_finish_point("credit_officer")
 
-# Compile graph into callable application
+def create_graph_from_config(config, tavily_tool=None):
+    """Create graph from configuration.
+    
+    Args:
+        config: ExperimentConfig object or dict with graph configuration
+        tavily_tool: Optional custom Tavily tool (uses default if None)
+    
+    Returns:
+        Compiled LangGraph application
+    """
+    if tavily_tool is None:
+        tavily_tool = tavily_search_tool
+    
+    # Create agents with custom tool
+    dd_agent = create_due_diligence_agent(tavily_tool)
+    ind_agent = create_industry_agent(tavily_tool)
+    
+    # Build graph
+    graph = StateGraph(State)
+    
+    # Get node config
+    if isinstance(config, dict):
+        nodes_config = config.get("graph", {}).get("nodes", [])
+    else:
+        nodes_config = config.graph.get("nodes", [])
+    
+    # Add nodes based on config
+    node_map = {
+        "sanitize_input": sanitize_input,
+        "due_diligence": dd_agent,
+        "industry": ind_agent,
+        "credit_risk": credit_risk_agent,
+        "credit_officer": credit_officer_agent,
+    }
+    
+    for node_config in nodes_config:
+        node_name = node_config.get("name")
+        if node_config.get("enabled", True) and node_name in node_map:
+            graph.add_node(node_name, node_map[node_name])
+    
+    # Get edges config
+    if isinstance(config, dict):
+        edges_config = config.get("graph", {}).get("edges", [])
+    else:
+        edges_config = config.graph.get("edges", [])
+    
+    # Add edges
+    for edge_config in edges_config:
+        from_node = edge_config.get("from")
+        to_nodes = edge_config.get("to", [])
+        if isinstance(to_nodes, str):
+            to_nodes = [to_nodes]
+        
+        for to_node in to_nodes:
+            graph.add_edge(from_node, to_node)
+    
+    # Set entry and finish points
+    graph.set_entry_point("sanitize_input")
+    graph.set_finish_point("credit_officer")
+    
+    return graph.compile()
+
+# Compile default graph
 app = graph.compile()
 
-# Example usage
-input_data = {
-    "name": "Example Corp",
-    "industry": "Fintech",
-    "revenue": 5000000,
-    "requested_loan_amount": 1000000,
-    "purpose": "Expansion"
-}
+# Example usage (only if run directly)
+if __name__ == "__main__":
+    input_data = {
+        "name": "Example Corp",
+        "industry": "Fintech",
+        "revenue": 5000000,
+        "requested_loan_amount": 1000000,
+        "purpose": "Expansion"
+    }
 
-result = app.invoke({"input": input_data})
+    result = app.invoke({"input": input_data})
 
-print(result["credit_officer"]["memo"])
-print("Decision:", result["credit_officer"]["decision"])
+    print(result["credit_officer"]["memo"])
+    print("Decision:", result["credit_officer"]["decision"])
