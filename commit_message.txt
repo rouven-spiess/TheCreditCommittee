@@ -1,0 +1,7 @@
+feat: implement credit committee LangGraph workflow
+
+- Add multi-agent credit decision system with parallel processing
+- Integrate Tavily Search API for research
+- Add state-based workflow with sanitization, due diligence, risk assessment
+- Include documentation and graph visualization
+- Configure environment variables and dependencies
