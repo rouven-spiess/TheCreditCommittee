@@ -21,7 +21,9 @@ class TavilyConfig(BaseModel):
 class ExperimentConfig(BaseModel):
     """Full experiment configuration."""
     experiment: Dict[str, Any]
+    input_data: Optional[Dict[str, Any]] = None
     tools: Dict[str, Any]
+    financials_schema: Optional[Dict[str, Any]] = None
     graph: Dict[str, Any]
     decision_rules: Dict[str, Any]
 
@@ -42,4 +44,31 @@ def get_tavily_config(config: ExperimentConfig) -> TavilyConfig:
     """Extract Tavily configuration from experiment config."""
     tavily_dict = config.tools.get("tavily", {})
     return TavilyConfig(**tavily_dict)
+
+
+def get_financials_schema(config: ExperimentConfig) -> Dict[str, Any]:
+    """Extract financials schema from experiment config."""
+    if config.financials_schema is None:
+        # Return default schema if not specified
+        return {
+            "fields": [
+                {"name": "revenue", "type": "float", "required": True},
+                {"name": "assets", "type": "float", "required": True},
+                {"name": "equity", "type": "float", "required": True},
+                {"name": "debt", "type": "float", "required": True},
+                {"name": "cash", "type": "float", "required": True},
+                {"name": "interest_coverage_ratio", "type": "float", "required": True},
+            ],
+            "default_values": {
+                "revenue": 5000000,
+                "assets": 10000000,
+                "equity": 5000000,
+                "debt": 5000000,
+                "cash": 1000000,
+                "interest_coverage_ratio": 10,
+            }
+        }
+    return config.financials_schema
+
+
 

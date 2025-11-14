@@ -1,0 +1,12 @@
+{"time":"2025-11-13T22:21:00.553584+01:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-11-13T22:21:00.827351+01:00","level":"INFO","msg":"stream: created new stream","id":"cxws23tb"}
+{"time":"2025-11-13T22:21:00.827413+01:00","level":"INFO","msg":"handler: started","stream_id":"cxws23tb"}
+{"time":"2025-11-13T22:21:00.827613+01:00","level":"INFO","msg":"stream: started","id":"cxws23tb"}
+{"time":"2025-11-13T22:21:00.827638+01:00","level":"INFO","msg":"sender: started","stream_id":"cxws23tb"}
+{"time":"2025-11-13T22:21:00.827665+01:00","level":"INFO","msg":"writer: started","stream_id":"cxws23tb"}
+{"time":"2025-11-13T22:21:17.990379+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-11-13T22:21:18.235427+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-11-13T22:21:18.241198+01:00","level":"INFO","msg":"stream: closing","id":"cxws23tb"}
+{"time":"2025-11-13T22:21:18.2416+01:00","level":"INFO","msg":"handler: closed","stream_id":"cxws23tb"}
+{"time":"2025-11-13T22:21:18.242002+01:00","level":"INFO","msg":"sender: closed","stream_id":"cxws23tb"}
+{"time":"2025-11-13T22:21:18.242043+01:00","level":"INFO","msg":"stream: closed","id":"cxws23tb"}

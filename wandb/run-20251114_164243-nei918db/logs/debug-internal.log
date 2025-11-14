@@ -1,0 +1,12 @@
+{"time":"2025-11-14T16:42:43.959283+01:00","level":"INFO","msg":"stream: starting","core version":"0.23.0"}
+{"time":"2025-11-14T16:42:44.24515+01:00","level":"INFO","msg":"stream: created new stream","id":"nei918db"}
+{"time":"2025-11-14T16:42:44.245219+01:00","level":"INFO","msg":"handler: started","stream_id":"nei918db"}
+{"time":"2025-11-14T16:42:44.245433+01:00","level":"INFO","msg":"stream: started","id":"nei918db"}
+{"time":"2025-11-14T16:42:44.245447+01:00","level":"INFO","msg":"writer: started","stream_id":"nei918db"}
+{"time":"2025-11-14T16:42:44.245524+01:00","level":"INFO","msg":"sender: started","stream_id":"nei918db"}
+{"time":"2025-11-14T16:42:52.418497+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-11-14T16:42:52.666057+01:00","level":"INFO","msg":"handler: operation stats","stats":{}}
+{"time":"2025-11-14T16:42:52.671569+01:00","level":"INFO","msg":"stream: closing","id":"nei918db"}
+{"time":"2025-11-14T16:42:52.671969+01:00","level":"INFO","msg":"handler: closed","stream_id":"nei918db"}
+{"time":"2025-11-14T16:42:52.672247+01:00","level":"INFO","msg":"sender: closed","stream_id":"nei918db"}
+{"time":"2025-11-14T16:42:52.672273+01:00","level":"INFO","msg":"stream: closed","id":"nei918db"}

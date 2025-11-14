@@ -1,0 +1,12 @@
+
+Processing application for ticker: MSFT
+[Credit Risk Agent] Fetching financials for ticker: MSFT
+[Credit Risk Agent] Alpha Vantage tool created, fetching data...
+[Credit Risk Agent] Received financials: ['revenue', 'assets', 'equity', 'debt', 'cash', 'interest_coverage_ratio']
+[Credit Risk Agent] Revenue: 281724000000.0, Assets: 619003000000.0
+[Altman Z] Components - A: 0.604, B: 0.555, C: 0.068, D: 1.247, E: 0.455
+[Altman Z] Calculated Z-Score: 2.93
+
+Decision: Approve
+Memo: Credit memo for MSFT:
+Due Diligence: {'news': [{'title': 'Triggers That Could Ignite The Next Rally In Microsoft Stock - Forbes', 'url': 'https://www.forbes.com/sites/greatspeculations/2025/11/14/trig...

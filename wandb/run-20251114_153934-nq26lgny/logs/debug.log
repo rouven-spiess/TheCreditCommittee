@@ -1,0 +1,26 @@
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_setup.py:_flush():80] Current SDK version is 0.23.0
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_setup.py:_flush():80] Configure stats pid to 26368
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_setup.py:_flush():80] Loading settings from /Users/rouvens/.config/wandb/settings
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_setup.py:_flush():80] Loading settings from /Users/rouvens/code/TheCreditCommittee/wandb/settings
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_setup.py:_flush():80] Loading settings from environment variables
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_init.py:setup_run_log_directory():713] Logging user logs to /Users/rouvens/code/TheCreditCommittee/wandb/run-20251114_153934-nq26lgny/logs/debug.log
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_init.py:setup_run_log_directory():714] Logging internal logs to /Users/rouvens/code/TheCreditCommittee/wandb/run-20251114_153934-nq26lgny/logs/debug-internal.log
+2025-11-14 15:39:34,352 INFO    MainThread:26368 [wandb_init.py:init():840] calling init triggers
+2025-11-14 15:39:34,353 INFO    MainThread:26368 [wandb_init.py:init():845] wandb.init called with sweep_config: {}
+config: {'experiment': {'name': 'baseline_tavily_7d', 'description': 'Baseline experiment with 7-day time range for Tavily search', 'tags': ['baseline', 'tavily']}, 'tools': {'tavily': {'max_results': 5, 'include_answer': True, 'include_raw_content': False, 'include_images': False, 'search_depth': 'advanced', 'time_range': '7d'}, 'alphavantage': {'function': 'INCOME_STATEMENT'}}, 'graph': {'nodes': [{'name': 'sanitize_input', 'enabled': True}, {'name': 'due_diligence', 'enabled': True}, {'name': 'industry', 'enabled': True}, {'name': 'credit_risk', 'enabled': True}, {'name': 'credit_officer', 'enabled': True}], 'edges': [{'from': 'sanitize_input', 'to': ['due_diligence', 'credit_risk']}, {'from': 'due_diligence', 'to': 'industry'}, {'from': 'credit_risk', 'to': 'industry'}, {'from': 'industry', 'to': 'credit_officer'}]}, 'decision_rules': {'altman_z_threshold': 2.6, 'require_no_major_risks': True}, '_wandb': {}}
+2025-11-14 15:39:34,353 INFO    MainThread:26368 [wandb_init.py:init():888] starting backend
+2025-11-14 15:39:34,630 INFO    MainThread:26368 [wandb_init.py:init():891] sending inform_init request
+2025-11-14 15:39:34,658 INFO    MainThread:26368 [wandb_init.py:init():899] backend started and connected
+2025-11-14 15:39:34,659 INFO    MainThread:26368 [wandb_init.py:init():969] updated telemetry
+2025-11-14 15:39:34,677 INFO    MainThread:26368 [wandb_init.py:init():993] communicating run to backend with 90.0 second timeout
+2025-11-14 15:39:35,384 INFO    MainThread:26368 [wandb_init.py:init():1040] starting run threads in backend
+2025-11-14 15:39:35,429 INFO    MainThread:26368 [wandb_run.py:_console_start():2504] atexit reg
+2025-11-14 15:39:35,429 INFO    MainThread:26368 [wandb_run.py:_redirect():2352] redirect: wrap_raw
+2025-11-14 15:39:35,429 INFO    MainThread:26368 [wandb_run.py:_redirect():2421] Wrapping output streams.
+2025-11-14 15:39:35,429 INFO    MainThread:26368 [wandb_run.py:_redirect():2444] Redirects installed.
+2025-11-14 15:39:35,431 INFO    MainThread:26368 [wandb_init.py:init():1080] run started, returning control to user process
+2025-11-14 15:39:51,518 INFO    MainThread:26368 [wandb_run.py:_finish():2270] finishing run rouvens/credit-committee/nq26lgny
+2025-11-14 15:39:51,519 INFO    MainThread:26368 [wandb_run.py:_atexit_cleanup():2469] got exitcode: 0
+2025-11-14 15:39:51,519 INFO    MainThread:26368 [wandb_run.py:_restore():2451] restore
+2025-11-14 15:39:51,519 INFO    MainThread:26368 [wandb_run.py:_restore():2457] restore done
+2025-11-14 15:39:52,691 INFO    MainThread:26368 [wandb_run.py:_footer_sync_info():3853] logging synced files

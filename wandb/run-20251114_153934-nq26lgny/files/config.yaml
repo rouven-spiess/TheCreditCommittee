@@ -1,0 +1,99 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            t2xahqr1w5n6mowhsd7qhseqfcumz9wb:
+                apple:
+                    ecpuCores: 2
+                    gpuCores: 16
+                    memoryGb: 32
+                    name: Apple M1 Pro
+                    pcpuCores: 8
+                    ramTotalBytes: "34359738368"
+                    swapTotalBytes: "21474836480"
+                args:
+                    - configs/example_experiment.yaml
+                codePath: run_experiment.py
+                codePathLocal: run_experiment.py
+                cpu_count: 10
+                cpu_count_logical: 10
+                disk:
+                    /:
+                        total: "994662584320"
+                        used: "556117528576"
+                email: rouven@mailbox.org
+                executable: /Users/rouvens/code/TheCreditCommittee/.venv/bin/python
+                git:
+                    commit: 3df34bdb14a586fc7f268f36eaeabe6882ee763d
+                    remote: https://github.com/rouven-spiess/TheCreditCommittee.git
+                host: rouvens-macbook-pro.home
+                memory:
+                    total: "34359738368"
+                os: macOS-26.1-arm64-arm-64bit
+                program: /Users/rouvens/code/TheCreditCommittee/run_experiment.py
+                python: CPython 3.12.6
+                root: /Users/rouvens/code/TheCreditCommittee
+                startedAt: "2025-11-14T14:39:34.345744Z"
+                writerId: t2xahqr1w5n6mowhsd7qhseqfcumz9wb
+        m: []
+        python_version: 3.12.6
+        t:
+            "1":
+                - 105
+            "2":
+                - 105
+            "3":
+                - 2
+                - 13
+                - 15
+                - 16
+            "4": 3.12.6
+            "5": 0.23.0
+            "12": 0.23.0
+            "13": darwin-arm64
+decision_rules:
+    value:
+        altman_z_threshold: 2.6
+        require_no_major_risks: true
+experiment:
+    value:
+        description: Baseline experiment with 7-day time range for Tavily search
+        name: baseline_tavily_7d
+        tags:
+            - baseline
+            - tavily
+graph:
+    value:
+        edges:
+            - from: sanitize_input
+              to:
+                - due_diligence
+                - credit_risk
+            - from: due_diligence
+              to: industry
+            - from: credit_risk
+              to: industry
+            - from: industry
+              to: credit_officer
+        nodes:
+            - enabled: true
+              name: sanitize_input
+            - enabled: true
+              name: due_diligence
+            - enabled: true
+              name: industry
+            - enabled: true
+              name: credit_risk
+            - enabled: true
+              name: credit_officer
+tools:
+    value:
+        alphavantage:
+            function: INCOME_STATEMENT
+        tavily:
+            include_answer: true
+            include_images: false
+            include_raw_content: false
+            max_results: 5
+            search_depth: advanced
+            time_range: 7d

@@ -1,0 +1,12 @@
+
+Processing application for ticker: IBM
+[Credit Risk Agent] Fetching financials for ticker: IBM
+[Credit Risk Agent] Alpha Vantage tool created, fetching data...
+[Credit Risk Agent] Received financials: ['revenue', 'assets', 'equity', 'debt', 'cash', 'interest_coverage_ratio']
+[Credit Risk Agent] Revenue: 62753000000.0, Assets: 137175000000.0
+[Altman Z] Components - A: 0.301, B: 0.199, C: 0.069, D: 0.249, E: 0.457
+[Altman Z] Calculated Z-Score: 1.47
+
+Decision: Reject
+Memo: Credit memo for IBM:
+Due Diligence: {'news': [{'title': 'Can the Launch of an Advanced Quantum Processor Propel IBM ...', 'url': 'https://www.zacks.com/stock/news/2790641/can-the-launch-of-an-advanced...

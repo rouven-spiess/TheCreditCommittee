@@ -3,6 +3,11 @@ experiment:
   description: "Baseline experiment with 7-day time range for Tavily search"
   tags: ["baseline", "tavily"]
 
+# Input data for the experiment
+# This defines the Alpha Vantage ticker symbol to process
+input_data:
+  ticker: "MSFT"  # Stock ticker symbol (e.g., "IBM", "AAPL", "MSFT")
+
 tools:
   tavily:
     max_results: 5
@@ -14,6 +19,44 @@ tools:
   
   alphavantage:
     function: "INCOME_STATEMENT"
+
+financials_schema:
+  # Schema definition for financial data structure
+  # These fields define what financial metrics are expected/used
+  fields:
+    - name: "revenue"
+      type: "float"
+      description: "Company revenue"
+      required: true
+    - name: "assets"
+      type: "float"
+      description: "Total assets"
+      required: true
+    - name: "equity"
+      type: "float"
+      description: "Shareholders' equity"
+      required: true
+    - name: "debt"
+      type: "float"
+      description: "Total debt"
+      required: true
+    - name: "cash"
+      type: "float"
+      description: "Cash and cash equivalents"
+      required: true
+    - name: "interest_coverage_ratio"
+      type: "float"
+      description: "Interest coverage ratio (EBIT / interest expense)"
+      required: true
+  
+  # Default/mock values (used when AlphaVantage is not available)
+  default_values:
+    revenue: 5000000
+    assets: 10000000
+    equity: 5000000
+    debt: 5000000
+    cash: 1000000
+    interest_coverage_ratio: 10
 
 graph:
   nodes:
@@ -41,4 +84,6 @@ graph:
 decision_rules:
   altman_z_threshold: 2.6
   require_no_major_risks: true
+
+
 

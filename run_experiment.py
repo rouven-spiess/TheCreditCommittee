@@ -30,17 +30,27 @@ def main(config_path: str):
         tavily_config = get_tavily_config(config)
         tavily_tool = create_tavily_tool(tavily_config)
         
-        # Create graph from config
-        app = create_graph_from_config(config, tavily_tool)
+        # Get financials schema from config
+        from modules.config_loader import get_financials_schema
+        financials_schema = get_financials_schema(config)
         
-        # Run experiment with sample data
-        input_data = {
-            "name": "Example Corp",
-            "industry": "Fintech",
-            "revenue": 5000000,
-            "requested_loan_amount": 1000000,
-            "purpose": "Expansion"
-        }
+        # Create graph from config
+        app = create_graph_from_config(config, tavily_tool, financials_schema)
+        
+        # Get input data from config, or use default
+        input_data = config.input_data
+        if input_data is None:
+            # Fallback to default if not in config
+            input_data = {
+                "ticker": "IBM"
+            }
+            print("Warning: No input_data in config, using default ticker: IBM")
+        
+        ticker = input_data.get('ticker', 'Unknown')
+        if not ticker:
+            raise ValueError("ticker is required in input_data")
+        
+        print(f"\nProcessing application for ticker: {ticker}")
         
         result = app.invoke({"input": input_data})
         

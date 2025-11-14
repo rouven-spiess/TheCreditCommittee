@@ -1,0 +1,12 @@
+
+Processing application for ticker: AAPL
+[Credit Risk Agent] Fetching financials for ticker: AAPL
+[Credit Risk Agent] Alpha Vantage tool created, fetching data...
+[Credit Risk Agent] Received financials: ['revenue', 'assets', 'equity', 'debt', 'cash', 'interest_coverage_ratio']
+[Credit Risk Agent] Revenue: 416161000000.0, Assets: 359241000000.0
+[Altman Z] Components - A: 0.299, B: 0.205, C: 0.174, D: 0.258, E: 1.158
+[Altman Z] Calculated Z-Score: 2.53
+
+Decision: Reject
+Memo: Credit memo for AAPL:
+Due Diligence: {'news': [{'title': 'Why AAPL Remains a Top Large-Cap Pick as of November 2025', 'url': 'https://markets.financialcontent.com/buffnews/article/marketminute-2025-11...
