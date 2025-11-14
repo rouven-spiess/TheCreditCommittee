@@ -1,45 +1,51 @@
-feat: integrate Alpha Vantage tool and simplify input to ticker-only
+feat: add OpenAI reasoning to credit officer and enhance memo generation
 
 Major changes:
-- Set up Alpha Vantage tool integration with schema-based response transformation
-  - Tool fetches INCOME_STATEMENT and BALANCE_SHEET data from Alpha Vantage API
-  - Response is automatically transformed to match financials_schema from YAML config
-  - Supports configurable schema with field mappings and default values
-  - Factory function create_alphavantage_tool() loads schema from config automatically
+- Enhanced credit officer agent with AI reasoning capability
+  - Created create_credit_officer_agent() factory function with optional synthesis_tool
+  - Credit officer now uses OpenAI to reason about ALL information, not just Z-score
+  - Analyzes financial metrics, due diligence findings, industry analysis, and risk factors
+  - Makes nuanced decisions balancing quantitative and qualitative factors
+  - Falls back to rule-based logic (Z-score > 2.6) if synthesis tool unavailable
+  - Extracts decision and reasoning from AI analysis
 
-- Simplified input_data to ticker-only format
-  - Removed name, industry, revenue, loan_amount, purpose fields
-  - Input now only requires stock ticker symbol (e.g., "IBM", "AAPL")
-  - All agents updated to use ticker for data fetching and searches
-  - Tavily searches now use ticker-based queries
+- Implemented comprehensive markdown credit memo generation
+  - Professional credit memo format with structured sections
+  - Executive summary with recommendation and key metrics
+  - Financial analysis table with formatted currency values
+  - Altman Z-Score interpretation (Safe/Grey/Distress zones)
+  - Due diligence findings (news, history, management)
+  - Industry analysis (trends, competitive landscape, economic outlook)
+  - Risk assessment with identified risks
+  - Decision reasoning section (AI-generated or rule-based)
+  - Conclusion summarizing evaluation factors
+  - Auto-saves memos to memos/ directory with timestamp
 
-- Implemented Altman Z-score calculation
-  - Replaced hardcoded score with actual calculation using financials data
-  - Z-score = 1.2A + 1.4B + 3.3C + 0.6D + 1.0E formula implemented
-  - Components calculated from Alpha Vantage financial data
-  - Added logging for calculation components and final score
+- Added OpenAI synthesis tool for agents
+  - Created openai_synthesis_tool class for synthesizing search results
+  - Tool generates compact, credit-risk-focused summaries from Tavily results
+  - Handles multiple result formats (dict with "answer", "results" array, etc.)
+  - Configurable model and temperature settings
+  - Graceful fallback if API fails
 
-- Credit decision now based solely on Z-score threshold
-  - Decision logic: Approve if Z-score > 2.6 and no major risks
-  - Removed dependency on other input fields for decision making
-  - Z-score threshold configurable in decision_rules
+- Enhanced agents to use synthesis tool
+  - Due diligence and industry agents now synthesize search results when tool available
+  - Improved output quality with coherent summaries instead of raw data
+  - Better integration of information in credit memos
 
-- Added financials_schema to YAML configuration
-  - Schema defines expected financial metrics (revenue, assets, equity, debt, cash, interest_coverage_ratio)
-  - Default values provided for fallback when API unavailable
-  - Schema can be customized per experiment
+- Configuration updates
+  - Added openai section to tools config (enabled, model, temperature)
+  - Automatic tool creation when enabled in config
+  - Graph creation passes synthesis tool to all relevant agents
 
-- Enhanced credit_risk_agent to use Alpha Vantage tool
-  - Automatically fetches real financial data for ticker
-  - Falls back to default values on API errors
-  - Integrated with financials_schema from config
-
-- Updated config_loader to support input_data and financials_schema
-  - Added get_financials_schema() helper function
-  - Input_data now optional in config with ticker field
+- Dependencies and infrastructure
+  - Added openai>=1.0.0 to dependencies
+  - Added memos/ directory to .gitignore
+  - Enhanced error handling and logging throughout
 
 Technical improvements:
-- Added comprehensive error handling and logging for Alpha Vantage API calls
-- Improved field mapping between Alpha Vantage API and schema fields
-- Enhanced tool factory pattern for consistent tool creation
-- Better exception handling with fallback to defaults
+- Credit officer now reasons comprehensively when synthesis enabled
+- Decision-making considers all available information, not just Z-score threshold
+- Better separation of concerns with factory functions for agents
+- Improved memo formatting and readability
+- Enhanced error handling with fallbacks at multiple levels

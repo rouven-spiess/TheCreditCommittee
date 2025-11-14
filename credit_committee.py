@@ -1,6 +1,6 @@
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph
-from modules.tools import tavily_search_tool, alphavantage_tool, create_tavily_tool
+from modules.tools import tavily_search_tool, alphavantage_tool, create_tavily_tool, create_openai_synthesis_tool
 
 # Define state schema
 class State(TypedDict):
@@ -22,29 +22,67 @@ def sanitize_input(state):
     return {"input": sanitized}
 
 # Define agents (nodes) - these will use the tool passed to them
-def create_due_diligence_agent(tavily_tool):
+def create_due_diligence_agent(tavily_tool, synthesis_tool=None):
     def due_diligence_agent(state):
         # Use Tavily for recent news, management info etc.
         ticker = state["input"]["ticker"]
-        results_news = tavily_tool.invoke(f"{ticker} stock recent news")
-        results_history = tavily_tool.invoke(f"{ticker} company history")
-        results_management = tavily_tool.invoke(f"{ticker} company management team")
+        
+        # Search for information
+        raw_news = tavily_tool.invoke(f"{ticker} stock recent news")
+        raw_history = tavily_tool.invoke(f"{ticker} company history")
+        raw_management = tavily_tool.invoke(f"{ticker} company management team")
+        
+        # Synthesize results if synthesis tool is available
+        if synthesis_tool:
+            try:
+                news = synthesis_tool.invoke(f"{ticker} stock recent news", raw_news)
+                history = synthesis_tool.invoke(f"{ticker} company history", raw_history)
+                management = synthesis_tool.invoke(f"{ticker} company management team", raw_management)
+            except Exception as e:
+                print(f"Warning: Synthesis failed, using raw results: {e}")
+                news = raw_news.get("answer", str(raw_news)) if isinstance(raw_news, dict) else str(raw_news)
+                history = raw_history.get("answer", str(raw_history)) if isinstance(raw_history, dict) else str(raw_history)
+                management = raw_management.get("answer", str(raw_management)) if isinstance(raw_management, dict) else str(raw_management)
+        else:
+            # Use raw results or extract answer if available
+            news = raw_news.get("answer", raw_news) if isinstance(raw_news, dict) else raw_news
+            history = raw_history.get("answer", raw_history) if isinstance(raw_history, dict) else raw_history
+            management = raw_management.get("answer", raw_management) if isinstance(raw_management, dict) else raw_management
+        
         return {
             "due_diligence": {
-                "news": results_news,
-                "history": results_history,
-                "management": results_management,
+                "news": news,
+                "history": history,
+                "management": management,
             }
         }
     return due_diligence_agent
 
-def create_industry_agent(tavily_tool):
+def create_industry_agent(tavily_tool, synthesis_tool=None):
     def industry_agent(state):
         ticker = state["input"]["ticker"]
         # Derive industry information from ticker/company
-        trends = tavily_tool.invoke(f"{ticker} stock industry trends")
-        competitive = tavily_tool.invoke(f"{ticker} company competitive landscape")
-        economic = tavily_tool.invoke(f"{ticker} company economic outlook")
+        raw_trends = tavily_tool.invoke(f"{ticker} stock industry trends")
+        raw_competitive = tavily_tool.invoke(f"{ticker} company competitive landscape")
+        raw_economic = tavily_tool.invoke(f"{ticker} company economic outlook")
+        
+        # Synthesize results if synthesis tool is available
+        if synthesis_tool:
+            try:
+                trends = synthesis_tool.invoke(f"{ticker} stock industry trends", raw_trends)
+                competitive = synthesis_tool.invoke(f"{ticker} company competitive landscape", raw_competitive)
+                economic = synthesis_tool.invoke(f"{ticker} company economic outlook", raw_economic)
+            except Exception as e:
+                print(f"Warning: Synthesis failed, using raw results: {e}")
+                trends = raw_trends.get("answer", str(raw_trends)) if isinstance(raw_trends, dict) else str(raw_trends)
+                competitive = raw_competitive.get("answer", str(raw_competitive)) if isinstance(raw_competitive, dict) else str(raw_competitive)
+                economic = raw_economic.get("answer", str(raw_economic)) if isinstance(raw_economic, dict) else str(raw_economic)
+        else:
+            # Use raw results or extract answer if available
+            trends = raw_trends.get("answer", raw_trends) if isinstance(raw_trends, dict) else raw_trends
+            competitive = raw_competitive.get("answer", raw_competitive) if isinstance(raw_competitive, dict) else raw_competitive
+            economic = raw_economic.get("answer", raw_economic) if isinstance(raw_economic, dict) else raw_economic
+        
         return {
             "industry": {
                 "trends": trends,
@@ -144,27 +182,349 @@ def create_credit_risk_agent(financials_schema=None, config_path=None):
 # Default credit risk agent (for backward compatibility)
 credit_risk_agent = create_credit_risk_agent()
 
-def credit_officer_agent(state):
-    # Combine all agent outputs and make rule-based decision
-    dd = state.get("due_diligence", {})
-    ind = state.get("industry", {})
-    cr = state.get("credit_risk", {})
+def create_credit_officer_agent(synthesis_tool=None):
+    """Create credit officer agent with optional reasoning capability.
     
-    decision = "Reject"
-    reasons = []
-    # Rule example: Approve if Altman Z > 2.6 and no major risks
-    if cr.get("altman_z_score", 0) > 2.6 and not cr.get("major_risks"):
-        decision = "Approve"
-    else:
-        reasons.append("Credit risk too high or major risks identified")
-    memo = f"Credit memo for {state['input']['ticker']}:\nDue Diligence: {dd}\nIndustry: {ind}\nCredit Risk: {cr}\nFinal Decision: {decision}"
-    return {
-        "credit_officer": {
-            "memo": memo,
-            "decision": decision,
-            "reasons": reasons,
+    Args:
+        synthesis_tool: Optional OpenAI synthesis tool for reasoning about all information
+    """
+    def credit_officer_agent(state):
+        """Generate a comprehensive markdown credit memo based on all agent analyses."""
+        from datetime import datetime
+        
+        ticker = state['input']['ticker']
+        dd = state.get("due_diligence", {})
+        ind = state.get("industry", {})
+        cr = state.get("credit_risk", {})
+        
+        financials = cr.get("financials", {})
+        altman_z = cr.get("altman_z_score", 0)
+        major_risks = cr.get("major_risks", [])
+        
+        # Decision logic - use OpenAI reasoning if available, otherwise use rule-based
+        decision = "Reject"
+        reasons = []
+        recommendation = ""
+        reasoning_summary = ""
+        
+        if synthesis_tool:
+            # Use OpenAI to reason about all available information
+            try:
+                # Prepare comprehensive context for reasoning
+                context = f"""Credit Risk Assessment for {ticker}
+
+Financial Analysis:
+- Altman Z-Score: {altman_z:.2f} ({'Above' if altman_z > 2.6 else 'Below'} threshold of 2.6)
+- Revenue: ${financials.get('revenue', 0):,.0f}
+- Assets: ${financials.get('assets', 0):,.0f}
+- Equity: ${financials.get('equity', 0):,.0f}
+- Debt: ${financials.get('debt', 0):,.0f}
+- Cash: ${financials.get('cash', 0):,.0f}
+- Interest Coverage Ratio: {financials.get('interest_coverage_ratio', 0):.2f}x
+- Major Risks Identified: {major_risks if major_risks else 'None'}
+
+Due Diligence Findings:
+- Recent News: {str(dd.get('news', 'N/A'))[:500]}
+- Company History: {str(dd.get('history', 'N/A'))[:500]}
+- Management: {str(dd.get('management', 'N/A'))[:500]}
+
+Industry Analysis:
+- Trends: {str(ind.get('trends', 'N/A'))[:500]}
+- Competitive Landscape: {str(ind.get('competitive_landscape', 'N/A'))[:500]}
+- Economic Outlook: {str(ind.get('economic_outlook', 'N/A'))[:500]}
+
+Please analyze all the above information and provide:
+1. A recommendation (Approve or Reject)
+2. Key reasons for the decision
+3. A brief summary of your reasoning (2-3 sentences)
+
+Consider:
+- The Altman Z-Score is a key indicator but not the only factor
+- Due diligence findings may reveal risks or opportunities not captured in financials
+- Industry trends and competitive position affect long-term viability
+- Economic outlook impacts future performance
+- Balance quantitative metrics with qualitative insights"""
+                
+                reasoning_result = synthesis_tool.invoke(
+                    f"Credit risk assessment for {ticker}",
+                    {"context": context},
+                    synthesis_prompt="""You are a senior credit officer making a loan decision. 
+Analyze all provided information comprehensively. Consider financial metrics, due diligence findings, 
+industry context, and risk factors. Provide a clear recommendation (Approve or Reject) with 
+well-reasoned justification. Be objective and consider both quantitative and qualitative factors."""
+                )
+                
+                reasoning_summary = reasoning_result
+                
+                # Parse the reasoning result to extract decision
+                reasoning_lower = reasoning_result.lower()
+                if "recommendation: approve" in reasoning_lower or "recommend: approve" in reasoning_lower or ("approve" in reasoning_lower and "reject" not in reasoning_lower[:100]):
+                    decision = "Approve"
+                    recommendation = f"**RECOMMENDATION: APPROVE** - {reasoning_result[:200]}"
+                else:
+                    decision = "Reject"
+                    recommendation = f"**RECOMMENDATION: REJECT** - {reasoning_result[:200]}"
+                
+                # Extract reasons from reasoning
+                if "reason" in reasoning_lower or "because" in reasoning_lower:
+                    # Try to extract structured reasons
+                    lines = reasoning_result.split('\n')
+                    for line in lines:
+                        if any(keyword in line.lower() for keyword in ['risk', 'concern', 'issue', 'negative', 'weak']):
+                            reasons.append(line.strip())
+                
+            except Exception as e:
+                print(f"Warning: OpenAI reasoning failed, falling back to rule-based decision: {e}")
+                # Fall back to rule-based logic
+                if altman_z > 2.6 and not major_risks:
+                    decision = "Approve"
+                    recommendation = "**RECOMMENDATION: APPROVE** - The applicant demonstrates strong financial health with a Z-score above the threshold and no major risks identified."
+                else:
+                    if altman_z <= 2.6:
+                        reasons.append(f"Altman Z-Score ({altman_z:.2f}) is below the threshold of 2.6, indicating elevated credit risk")
+                    if major_risks:
+                        reasons.append(f"Major risks identified: {', '.join(str(r) for r in major_risks)}")
+                    recommendation = "**RECOMMENDATION: REJECT** - Credit risk assessment indicates the application does not meet approval criteria."
+        else:
+            # Rule-based decision logic (fallback)
+            if altman_z > 2.6 and not major_risks:
+                decision = "Approve"
+                recommendation = "**RECOMMENDATION: APPROVE** - The applicant demonstrates strong financial health with a Z-score above the threshold and no major risks identified."
+            else:
+                if altman_z <= 2.6:
+                    reasons.append(f"Altman Z-Score ({altman_z:.2f}) is below the threshold of 2.6, indicating elevated credit risk")
+                if major_risks:
+                    reasons.append(f"Major risks identified: {', '.join(str(r) for r in major_risks)}")
+                recommendation = "**RECOMMENDATION: REJECT** - Credit risk assessment indicates the application does not meet approval criteria."
+        
+        # Format financials for display
+        def format_currency(value):
+            """Format large numbers as currency."""
+            if value >= 1_000_000_000:
+                return f"${value/1_000_000_000:.2f}B"
+            elif value >= 1_000_000:
+                return f"${value/1_000_000:.2f}M"
+            else:
+                return f"${value:,.0f}"
+        
+        # Generate markdown memo
+        memo = f"""# Credit Memo
+
+**Ticker Symbol:** {ticker}  
+**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  
+**Status:** {decision}
+
+---
+
+## Executive Summary
+
+{recommendation}
+
+**Altman Z-Score:** {altman_z:.2f}  
+**Risk Level:** {'Low' if altman_z > 2.6 else 'High' if altman_z < 1.8 else 'Moderate'}
+
+---
+
+## Financial Analysis
+
+### Key Financial Metrics
+
+| Metric | Value |
+|--------|-------|
+| Revenue | {format_currency(financials.get('revenue', 0))} |
+| Total Assets | {format_currency(financials.get('assets', 0))} |
+| Shareholders' Equity | {format_currency(financials.get('equity', 0))} |
+| Total Debt | {format_currency(financials.get('debt', 0))} |
+| Cash & Equivalents | {format_currency(financials.get('cash', 0))} |
+| Interest Coverage Ratio | {financials.get('interest_coverage_ratio', 0):.2f}x |
+
+### Altman Z-Score Analysis
+
+The Altman Z-Score is a financial model used to predict the probability of bankruptcy. Scores above 2.6 indicate financial stability, while scores below 1.8 suggest financial distress.
+
+**Calculated Z-Score:** {altman_z:.2f}
+
+**Interpretation:**
+"""
+        
+        if altman_z > 2.6:
+            memo += "- ✅ **Safe Zone**: Strong financial position, low bankruptcy risk\n"
+        elif altman_z > 1.8:
+            memo += "- ⚠️ **Grey Zone**: Moderate financial risk, requires careful monitoring\n"
+        else:
+            memo += "- ❌ **Distress Zone**: High bankruptcy risk, significant financial distress\n"
+        
+        memo += f"""
+---
+
+## Due Diligence Findings
+
+### Recent News & Events
+"""
+        
+        # Extract and format due diligence information
+        # Handle both synthesized (string) and raw (dict) results
+        dd_news = dd.get("news", {})
+        if isinstance(dd_news, str):
+            memo += f"{dd_news}\n\n"
+        elif isinstance(dd_news, dict) and "answer" in dd_news:
+            memo += f"{dd_news.get('answer', 'No recent news information available.')}\n\n"
+        elif dd_news:
+            memo += f"{str(dd_news)[:500]}...\n\n"
+        else:
+            memo += "No recent news information available.\n\n"
+        
+        memo += """### Company History
+"""
+        dd_history = dd.get("history", {})
+        if isinstance(dd_history, str):
+            memo += f"{dd_history}\n\n"
+        elif isinstance(dd_history, dict) and "answer" in dd_history:
+            memo += f"{dd_history.get('answer', 'No company history information available.')}\n\n"
+        elif dd_history:
+            memo += f"{str(dd_history)[:500]}...\n\n"
+        else:
+            memo += "No company history information available.\n\n"
+        
+        memo += """### Management Team
+"""
+        dd_management = dd.get("management", {})
+        if isinstance(dd_management, str):
+            memo += f"{dd_management}\n\n"
+        elif isinstance(dd_management, dict) and "answer" in dd_management:
+            memo += f"{dd_management.get('answer', 'No management information available.')}\n\n"
+        elif dd_management:
+            memo += f"{str(dd_management)[:500]}...\n\n"
+        else:
+            memo += "No management information available.\n\n"
+        
+        memo += """---
+
+## Industry Analysis
+
+### Industry Trends
+"""
+        ind_trends = ind.get("trends", {})
+        if isinstance(ind_trends, str):
+            memo += f"{ind_trends}\n\n"
+        elif isinstance(ind_trends, dict) and "answer" in ind_trends:
+            memo += f"{ind_trends.get('answer', 'No industry trends information available.')}\n\n"
+        elif ind_trends:
+            memo += f"{str(ind_trends)[:500]}...\n\n"
+        else:
+            memo += "No industry trends information available.\n\n"
+        
+        memo += """### Competitive Landscape
+"""
+        ind_competitive = ind.get("competitive_landscape", {})
+        if isinstance(ind_competitive, str):
+            memo += f"{ind_competitive}\n\n"
+        elif isinstance(ind_competitive, dict) and "answer" in ind_competitive:
+            memo += f"{ind_competitive.get('answer', 'No competitive landscape information available.')}\n\n"
+        elif ind_competitive:
+            memo += f"{str(ind_competitive)[:500]}...\n\n"
+        else:
+            memo += "No competitive landscape information available.\n\n"
+        
+        memo += """### Economic Outlook
+"""
+        ind_economic = ind.get("economic_outlook", {})
+        if isinstance(ind_economic, str):
+            memo += f"{ind_economic}\n\n"
+        elif isinstance(ind_economic, dict) and "answer" in ind_economic:
+            memo += f"{ind_economic.get('answer', 'No economic outlook information available.')}\n\n"
+        elif ind_economic:
+            memo += f"{str(ind_economic)[:500]}...\n\n"
+        else:
+            memo += "No economic outlook information available.\n\n"
+        
+        memo += """---
+
+## Risk Assessment
+
+### Identified Risks
+"""
+        
+        if major_risks:
+            for i, risk in enumerate(major_risks, 1):
+                memo += f"{i}. {risk}\n"
+        else:
+            memo += "No major risks identified in the analysis.\n"
+        
+        memo += f"""
+### Risk Factors Considered
+
+- **Financial Stability**: Based on Altman Z-Score analysis
+- **Market Position**: Industry and competitive analysis
+- **Operational History**: Due diligence findings
+- **Economic Environment**: Industry economic outlook
+
+---
+
+## Final Decision
+
+**Decision:** {decision}
+
+**Rationale:**
+"""
+        
+        if reasons:
+            for i, reason in enumerate(reasons, 1):
+                memo += f"{i}. {reason}\n"
+        else:
+            memo += "All criteria met for approval.\n"
+        
+        memo += f"""
+
+---
+
+## Decision Reasoning
+"""
+        
+        if reasoning_summary:
+            memo += f"""
+{reasoning_summary}
+
+"""
+        else:
+            memo += f"""
+Based on comprehensive analysis of financial metrics, due diligence findings, industry context, and risk assessment, the recommendation is to **{decision}** this application.
+
+**Key Factors:**
+- Altman Z-Score: {altman_z:.2f} ({'Above' if altman_z > 2.6 else 'Below'} threshold of 2.6)
+- Major Risks: {'Present' if major_risks else 'None identified'}
+- Financial Position: {'Strong' if financials.get('equity', 0) > financials.get('debt', 0) else 'Moderate' if financials.get('equity', 0) > 0 else 'Weak'}
+
+"""
+        
+        memo += """---
+
+## Conclusion
+
+The decision is based on a comprehensive evaluation of:
+- Financial health metrics (Altman Z-Score and key ratios)
+- Due diligence findings (news, history, management)
+- Industry analysis (trends, competition, economic outlook)
+- Risk assessment
+
+---
+
+*This memo was generated automatically by the Credit Committee AI system.*
+"""
+        
+        return {
+            "credit_officer": {
+                "memo": memo,
+                "decision": decision,
+                "reasons": reasons,
+                "recommendation": recommendation,
+                "reasoning": reasoning_summary if reasoning_summary else None,
+            }
         }
-    }
+    return credit_officer_agent
+
+# Default credit officer agent (for backward compatibility)
+credit_officer_agent = create_credit_officer_agent()
 
 # Placeholder functions for credit risk computations
 def compute_altman_z(financials):
@@ -240,7 +600,10 @@ graph.add_node("sanitize_input", sanitize_input)
 graph.add_node("due_diligence", due_diligence_agent)
 graph.add_node("industry", industry_agent)
 graph.add_node("credit_risk", credit_risk_agent)
-graph.add_node("credit_officer", credit_officer_agent)
+# Note: credit_officer_agent will be set in create_graph_from_config
+# For default graph, use the default agent
+default_credit_officer = create_credit_officer_agent()
+graph.add_node("credit_officer", default_credit_officer)
 
 graph.set_entry_point("sanitize_input")
 
@@ -256,13 +619,14 @@ graph.add_edge("industry", "credit_officer")
 
 graph.set_finish_point("credit_officer")
 
-def create_graph_from_config(config, tavily_tool=None, financials_schema=None):
+def create_graph_from_config(config, tavily_tool=None, financials_schema=None, synthesis_tool=None):
     """Create graph from configuration.
     
     Args:
         config: ExperimentConfig object or dict with graph configuration
         tavily_tool: Optional custom Tavily tool (uses default if None)
         financials_schema: Optional financials schema from config
+        synthesis_tool: Optional OpenAI synthesis tool for summarizing search results
     
     Returns:
         Compiled LangGraph application
@@ -278,10 +642,29 @@ def create_graph_from_config(config, tavily_tool=None, financials_schema=None):
         elif isinstance(config, dict):
             financials_schema = config.get("financials_schema")
     
-    # Create agents with custom tool and schema
-    dd_agent = create_due_diligence_agent(tavily_tool)
-    ind_agent = create_industry_agent(tavily_tool)
+    # Create synthesis tool if not provided but enabled in config
+    if synthesis_tool is None:
+        # Check if OpenAI synthesis is enabled in config
+        if isinstance(config, dict):
+            openai_config = config.get("tools", {}).get("openai", {})
+        else:
+            openai_config = getattr(config, 'tools', {}).get("openai", {}) if hasattr(config, 'tools') else {}
+        
+        if openai_config.get("enabled", False):
+            try:
+                model = openai_config.get("model", "gpt-4o-mini")
+                temperature = openai_config.get("temperature", 0.3)
+                synthesis_tool = create_openai_synthesis_tool(model=model, temperature=temperature)
+                print(f"[Config] OpenAI synthesis enabled (model: {model})")
+            except Exception as e:
+                print(f"Warning: Could not create OpenAI synthesis tool: {e}")
+                synthesis_tool = None
+    
+    # Create agents with custom tools and schema
+    dd_agent = create_due_diligence_agent(tavily_tool, synthesis_tool)
+    ind_agent = create_industry_agent(tavily_tool, synthesis_tool)
     cr_agent = create_credit_risk_agent(financials_schema)
+    co_agent = create_credit_officer_agent(synthesis_tool)
     
     # Build graph
     graph = StateGraph(State)
@@ -298,7 +681,7 @@ def create_graph_from_config(config, tavily_tool=None, financials_schema=None):
         "due_diligence": dd_agent,
         "industry": ind_agent,
         "credit_risk": cr_agent,
-        "credit_officer": credit_officer_agent,
+        "credit_officer": co_agent,
     }
     
     for node_config in nodes_config:

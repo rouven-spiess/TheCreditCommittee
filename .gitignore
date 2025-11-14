@@ -64,5 +64,8 @@ dmypy.json
 # uv
 .uv/
 
+# Generated memos
+memos/
+
 
 

@@ -1,0 +1,40 @@
+{
+  "os": "macOS-26.1-arm64-arm-64bit",
+  "python": "CPython 3.12.6",
+  "startedAt": "2025-11-14T18:23:04.479284Z",
+  "args": [
+    "configs/example_experiment.yaml"
+  ],
+  "program": "/Users/rouvens/code/TheCreditCommittee/run_experiment.py",
+  "codePath": "run_experiment.py",
+  "codePathLocal": "run_experiment.py",
+  "git": {
+    "remote": "https://github.com/rouven-spiess/TheCreditCommittee.git",
+    "commit": "978c0d7971df0d1bf2aa9cf033572ae5561d1759"
+  },
+  "email": "rouven@mailbox.org",
+  "root": "/Users/rouvens/code/TheCreditCommittee",
+  "host": "rouvens-macbook-pro.home",
+  "executable": "/Users/rouvens/code/TheCreditCommittee/.venv/bin/python",
+  "cpu_count": 10,
+  "cpu_count_logical": 10,
+  "disk": {
+    "/": {
+      "total": "994662584320",
+      "used": "565565743104"
+    }
+  },
+  "memory": {
+    "total": "34359738368"
+  },
+  "apple": {
+    "name": "Apple M1 Pro",
+    "ecpuCores": 2,
+    "pcpuCores": 8,
+    "gpuCores": 16,
+    "memoryGb": 32,
+    "swapTotalBytes": "23622320128",
+    "ramTotalBytes": "34359738368"
+  },
+  "writerId": "xx7uet2ihpyqps9k5rrrmzu1x885qalk"
+}

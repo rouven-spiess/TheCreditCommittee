@@ -1,6 +1,7 @@
 import os
 import requests
-from typing import Optional
+import json
+from typing import Optional, Dict, Any
 from pydantic import Field
 from langchain_core.tools import BaseTool
 from dotenv import load_dotenv
@@ -277,3 +278,140 @@ class alphavantage_tool(BaseTool):
     def get(self) -> dict:
         """Legacy method for backward compatibility."""
         return self._run()
+
+
+def create_openai_synthesis_tool(model: str = "gpt-4o-mini", temperature: float = 0.3):
+    """Create an OpenAI tool for synthesizing and summarizing search results.
+    
+    Args:
+        model: OpenAI model to use (default: "gpt-4o-mini")
+        temperature: Temperature for generation (default: 0.3 for more focused output)
+    
+    Returns:
+        OpenAI synthesis tool instance
+    """
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY not found in environment variables. Please set it in .env file.")
+    
+    tool = openai_synthesis_tool(
+        model=model,
+        temperature=temperature,
+        api_key=openai_api_key
+    )
+    return tool
+
+
+class openai_synthesis_tool(BaseTool):
+    name: str = "openai_synthesis_tool"
+    description: str = "Synthesizes and summarizes search results using OpenAI. Takes raw search results and creates a compact, coherent summary with key insights."
+    query: Optional[str] = Field(default=None, description="The original search query that was used")
+    search_results: Optional[Dict[str, Any]] = Field(default=None, description="Raw search results from Tavily or other search tools")
+    synthesis_prompt: Optional[str] = Field(default=None, description="Custom prompt for synthesis (optional)")
+    model: str = Field(default="gpt-4o-mini", description="OpenAI model to use")
+    temperature: float = Field(default=0.3, description="Temperature for generation")
+    api_key: str = Field(description="OpenAI API key")
+    
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.3, api_key: str = None, **kwargs):
+        if api_key is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not found. Please provide it or set it in .env file.")
+        super().__init__(model=model, temperature=temperature, api_key=api_key, **kwargs)
+    
+    def _run(self, query: str, search_results: Dict[str, Any], synthesis_prompt: Optional[str] = None) -> str:
+        """Synthesize search results into a compact summary.
+        
+        Args:
+            query: The original search query
+            search_results: Raw search results from Tavily
+            synthesis_prompt: Optional custom prompt
+        
+        Returns:
+            Synthesized summary as a string
+        """
+        try:
+            import openai
+        except ImportError:
+            raise ImportError("openai package is required. Install with: pip install openai")
+        
+        # Extract relevant information from Tavily results
+        content_parts = []
+        
+        # Handle different Tavily result formats
+        if isinstance(search_results, dict):
+            # Check if it has an 'answer' field (Tavily's AI-generated answer)
+            if "answer" in search_results:
+                content_parts.append(f"AI-Generated Answer: {search_results['answer']}")
+            
+            # Extract content from results array
+            if "results" in search_results:
+                for i, result in enumerate(search_results["results"][:5], 1):  # Limit to top 5
+                    title = result.get("title", "")
+                    content = result.get("content", "")
+                    url = result.get("url", "")
+                    if content:
+                        content_parts.append(f"Source {i} ({title}): {content[:500]}")  # Truncate long content
+        elif isinstance(search_results, list):
+            # Handle list of results
+            for i, result in enumerate(search_results[:5], 1):
+                if isinstance(result, dict):
+                    title = result.get("title", "")
+                    content = result.get("content", "")
+                    if content:
+                        content_parts.append(f"Source {i} ({title}): {content[:500]}")
+                else:
+                    content_parts.append(f"Source {i}: {str(result)[:500]}")
+        else:
+            # Fallback: convert to string
+            content_parts.append(str(search_results)[:2000])
+        
+        # Prepare the synthesis prompt
+        if synthesis_prompt is None:
+            synthesis_prompt = """You are a financial analyst synthesizing search results for a credit risk assessment.
+
+Your task is to:
+1. Extract the most relevant and important information
+2. Identify key insights, risks, and opportunities
+3. Create a concise, well-structured summary (2-4 paragraphs)
+4. Focus on facts that are relevant for credit risk evaluation
+5. Avoid redundancy and speculation
+
+Be objective, factual, and focus on information that would be useful for making a credit decision."""
+
+        # Build the full prompt
+        full_prompt = f"""{synthesis_prompt}
+
+Original Query: {query}
+
+Search Results:
+{chr(10).join(content_parts)}
+
+Please provide a concise synthesis of the above search results, focusing on the most relevant information for credit risk assessment."""
+
+        # Call OpenAI API
+        try:
+            client = openai.OpenAI(api_key=self.api_key)
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst expert at synthesizing information for credit risk assessments."},
+                    {"role": "user", "content": full_prompt}
+                ],
+                temperature=self.temperature,
+                max_tokens=500  # Keep summaries compact
+            )
+            
+            summary = response.choices[0].message.content.strip()
+            return summary
+            
+        except Exception as e:
+            # Fallback: return a basic summary if API fails
+            print(f"Warning: OpenAI API call failed: {e}")
+            if content_parts:
+                return f"Summary of search results for '{query}': {content_parts[0][:300]}..."
+            return f"Unable to synthesize results for '{query}'. Raw results available."
+    
+    def invoke(self, query: str, search_results: Dict[str, Any], synthesis_prompt: Optional[str] = None) -> str:
+        """Invoke the tool (LangChain compatible)."""
+        return self._run(query, search_results, synthesis_prompt)

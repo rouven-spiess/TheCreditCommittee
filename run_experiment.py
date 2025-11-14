@@ -68,7 +68,21 @@ def main(config_path: str):
         })
         
         print(f"\nDecision: {decision}")
-        print(f"Memo: {result['credit_officer']['memo'][:200]}...")
+        print(f"\n{'='*60}")
+        print("CREDIT MEMO")
+        print(f"{'='*60}")
+        print(result['credit_officer']['memo'])
+        print(f"{'='*60}")
+        
+        # Save memo to file
+        from pathlib import Path
+        from datetime import datetime
+        memo_dir = Path("memos")
+        memo_dir.mkdir(exist_ok=True)
+        memo_file = memo_dir / f"memo_{ticker}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        with open(memo_file, 'w') as f:
+            f.write(result['credit_officer']['memo'])
+        print(f"\nCredit memo saved to: {memo_file}")
         
     except Exception as e:
         tracker.log_metrics({"error": 1})

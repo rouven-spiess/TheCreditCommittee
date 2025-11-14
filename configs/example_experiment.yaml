@@ -6,7 +6,7 @@ experiment:
 # Input data for the experiment
 # This defines the Alpha Vantage ticker symbol to process
 input_data:
-  ticker: "MSFT"  # Stock ticker symbol (e.g., "IBM", "AAPL", "MSFT")
+  ticker: "ASML"  # Stock ticker symbol (e.g., "IBM", "AAPL", "MSFT")
 
 tools:
   tavily:
@@ -19,6 +19,11 @@ tools:
   
   alphavantage:
     function: "INCOME_STATEMENT"
+  
+  openai:
+    enabled: true  # Enable OpenAI synthesis for search results
+    model: "gpt-4o-mini"  # Options: "gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"
+    temperature: 0.3  # Lower = more focused, Higher = more creative (0.0-1.0)
 
 financials_schema:
   # Schema definition for financial data structure
